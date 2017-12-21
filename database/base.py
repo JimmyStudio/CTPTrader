@@ -79,6 +79,7 @@ def check_collector(date):
             print(res.next())
         except StopIteration:
             break
+    db = pymongo.MongoClient(host='192.168.1.10', port=27017).futures
     res = db.rb_price.find({'InstrumentID':'rb1805','TradingDay':20171221},['InstrumentID', 'UpdateTime','TradingDay','LastPrice','insert_date','insert_time']).sort([('insert_time', -1)]).limit(1)
     print(next(res))
 
