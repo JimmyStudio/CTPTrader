@@ -10,10 +10,7 @@ description:
 '''
 
 __author__ = 'Jimmy'
-
-import requests as rq
-
-p = 2 - 1 >0
-p2 = 3 > 4
-p3 =p and p2
-print(p3)
+import utils.tools as tl
+tl.config_logging()
+import logging as log
+log.info('ddsd')

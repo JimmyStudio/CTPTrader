@@ -12,14 +12,15 @@ description:
 __author__ = 'Jimmy'
 from trade.tradeStrategy import *
 from utils.ta import *
-from datetime import datetime as dt
+import utils.tools as tl
+import logging as log
 
 class BollStrategy_2(TradeStrategy):
     def initialize(self):
         self.context.universe = ['SR805']
-        self.context.strategy_name = 'boll_2S_v4.0'
-        self.context.strategy_id = 'boll_2S'
-        self.context.bar_frequency = '2S'
+        self.context.strategy_name = 'boll_10S_v4.0'
+        self.context.strategy_id = 'boll_10S'
+        self.context.bar_frequency = '10S'
         self.context.init_cash = 100000
 
         self.context.user_id = '104749'
@@ -340,6 +341,8 @@ class BollStrategy_x(TradeStrategy):
             var = Variables(symbol)
             self.context.vars[symbol] = var
 
+        tl.config_logging()
+
     def on_trade(self, trade):
         var = self.context.vars[trade.symbol]
         if trade.offset == OPEN:
@@ -410,10 +413,10 @@ class BollStrategy_x(TradeStrategy):
             if var.gain_over_flag and (var.max_gain - delta) / var.max_gain > var.stop_gain_thres:
                 symbol_obj = self.context.symbol_infos[tick.symbol]
                 if var.direction == LONG:
-                    print('多单止盈')
+                    log.info('多单止盈 max_gain %s gain_now %s' % (var.max_gain, delta))
                     self.order(tick.symbol,LONG,CLOSE,var.open_vol,limit_price=tick.last_price -  var.slippage * symbol_obj.tick_size)
                 else:
-                    print('空单止盈')
+                    log.info('空单止盈 max_gain %s gain_now %s' % (var.max_gain, delta))
                     self.order(tick.symbol,SHORT,CLOSE,var.open_vol,limit_price=tick.last_price +  var.slippage * symbol_obj.tick_size)
 
             if delta / var.open_price > var.gain_thres:
@@ -426,12 +429,12 @@ class BollStrategy_x(TradeStrategy):
             symbol_obj = self.context.symbol_infos[tick.symbol]
             if var.direction == LONG:
                 if var.open_price - tick.last_price > var.stop_loss_thres * var.boll_t.mid or tick.last_price < var.boll_t.bot:
-                    print('多单止损')
+                    log.info('多单止损')
                     self.order(tick.symbol, LONG, CLOSE, var.open_vol,
                                limit_price=tick.last_price -  var.slippage * symbol_obj.tick_size)
             elif var.direction == SHORT:
                 if tick.last_price - var.open_price > var.stop_loss_thres * var.boll_t.mid or tick.last_price > var.boll_t.top:
-                    print('空单止损')
+                    log.info('空单止损')
                     self.order(tick.symbol, SHORT, CLOSE, var.open_vol,
                                limit_price=tick.last_price + var.slippage * symbol_obj.tick_size)
 
@@ -447,14 +450,14 @@ class BollStrategy_x(TradeStrategy):
             symbol_obj = self.context.symbol_infos[bar.symbol]
             if var.close_count >= 3:
                 if not self.pre_close(var, bar.symbol):
-                    print('平空2')
+                    log.info('平空*')
                     self.order(bar.symbol,SHORT,CLOSE,var.open_vol,limit_price=bar.close + symbol_obj.tick_size)
             else:
                 if bar.close > boll.mid and bar.close > bar.open and (boll.top - boll.bot) / boll.mid > var.spread_thres:
                     var.close_count += 1
                     if var.close_count >= 3:
                         if not self.pre_close(var, bar.symbol):
-                            print('平空1')
+                            log.info('平空')
                             self.order(bar.symbol, SHORT, CLOSE, var.open_vol,limit_price=bar.close + var.slippage * symbol_obj.tick_size)
 
     def long_close_signal(self, var, bar, boll):
@@ -462,14 +465,14 @@ class BollStrategy_x(TradeStrategy):
             symbol_obj = self.context.symbol_infos[bar.symbol]
             if var.close_count >= 3:
                 if not self.pre_close(var, bar.symbol):
-                    print('平多2')
+                    log.info('平多*')
                     self.order(bar.symbol,LONG,CLOSE,var.open_vol,limit_price=bar.close - symbol_obj.tick_size)
             else:
                 if bar.close < boll.mid and bar.close < bar.open and (boll.top - boll.bot) / boll.mid > var.spread_thres:
                     var.close_count += 1
                     if var.close_count >= 3:
                         if not self.pre_close(var, bar.symbol):
-                            print('平多1')
+                            log.info('平多')
                             self.order(bar.symbol, LONG, CLOSE, var.open_vol,limit_price=bar.close -var.slippage * symbol_obj.tick_size)
 
     def short_open_signal(self, var, bar, ma, boll):
@@ -482,6 +485,7 @@ class BollStrategy_x(TradeStrategy):
                         var.signal_count += 1
                         var.bar_n_2 = bar
                         var.boll_n_2 = boll
+                        log.info('空单第1根突破')
 
             elif var.signal_count == 1:
                 if (boll.top - boll.bot) / boll.mid > var.spread_thres:
@@ -491,6 +495,8 @@ class BollStrategy_x(TradeStrategy):
                         var.signal_count += 1
                         var.bar_n_1 = bar
                         var.boll_n_1 = boll
+                        log.info('空单第2根突破')
+
                 else:
                     var.pre_bar_direction_flag = ''
                     var.signal_count = 0
@@ -509,7 +515,7 @@ class BollStrategy_x(TradeStrategy):
 
                         if cond_3:
                             if self.pre_open(var, bar.symbol):
-                                print('开空')
+                                log.info('开空')
                                 symbol_obj = var.symbol_infos[bar.symbol]
                                 self.order(bar.symbol, SHORT, OPEN, var.limit_vol,limit_price=bar.close - var.slippage * symbol_obj.tick_size)
                 # 放弃所有信号
@@ -532,6 +538,8 @@ class BollStrategy_x(TradeStrategy):
                         var.signal_count += 1
                         var.bar_n_2 = bar
                         var.boll_n_2 = boll
+                        log.info('多单第1根突破')
+
             elif var.signal_count == 1:
                 if (boll.top - boll.bot) / boll.mid > var.spread_thres:
                     cond_1_3 = bar.close > boll.mid
@@ -540,6 +548,8 @@ class BollStrategy_x(TradeStrategy):
                         var.signal_count += 1
                         var.bar_n_1 = bar
                         var.boll_n_1 = boll
+                        log.info('多单第2根突破')
+
                 else:
                     var.pre_bar_direction_flag = ''
                     var.signal_count = 0
@@ -558,7 +568,7 @@ class BollStrategy_x(TradeStrategy):
 
                         if cond_3:
                             if self.pre_open(var, bar.symbol):
-                                print('开多')
+                                log.info('开多')
                                 symbol_obj = self.context.symbol_infos[bar.symbol]
                                 self.order(bar.symbol, LONG, OPEN, var.limit_vol,limit_price=bar.close + var.slippage * symbol_obj.tick_size)
                 # 放弃所有信号
@@ -572,14 +582,14 @@ class BollStrategy_x(TradeStrategy):
     def long_open_by_tick(self, var, tick):
         if var.signal_count == 1 and var.pre_bar_direction_flag == LONG:
             if tick.last_price - var.bar_n_2.close >= var.tick_open_thres * var.boll_n_2.mid:
-                print('按tick 开多')
+                log.info('按tick 开多')
                 symbol_obj = self.context.symbol_infos[tick.symbol]
                 self.order(tick.symbol, LONG, OPEN, var.limit_vol,limit_price=tick.last_price + var.slippage * symbol_obj.tick_size)
 
     def short_open_by_tick(self, var, tick):
         if var.signal_count == 1 and var.pre_bar_direction_flag == SHORT:
             if var.bar_n_2.close - tick.last_price >= var.tick_open_thres * var.boll_n_2.mid:
-                print('按tick 开空')
+                log.info('按tick 开空')
                 symbol_obj = self.context.symbol_infos[tick.symbol]
                 self.order(tick.symbol, SHORT, OPEN, var.limit_vol,limit_price=tick.last_price - var.slippage * symbol_obj.tick_size)
 
