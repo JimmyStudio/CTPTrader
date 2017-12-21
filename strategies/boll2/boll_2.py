@@ -285,6 +285,10 @@ class BollStrategy_x(TradeStrategy):
                 log.info('%s 按tick 开多' % tick.symbol)
                 symbol_obj = self.context.symbol_infos[tick.symbol]
                 self.order(tick.symbol, LONG, OPEN, var.limit_vol,limit_price=tick.last_price + var.slippage * symbol_obj.tick_size)
+                var.pre_bar_direction_flag = ''
+                var.signal_count = 0
+                var.bar_n_2 = None
+                var.boll_n_2 = None
 
     def short_open_by_tick(self, var, tick):
         if var.signal_count == 1 and var.pre_bar_direction_flag == SHORT:
@@ -292,6 +296,10 @@ class BollStrategy_x(TradeStrategy):
                 log.info('%s 按tick 开空' % tick.symbol)
                 symbol_obj = self.context.symbol_infos[tick.symbol]
                 self.order(tick.symbol, SHORT, OPEN, var.limit_vol,limit_price=tick.last_price - var.slippage * symbol_obj.tick_size)
+                var.pre_bar_direction_flag = ''
+                var.signal_count = 0
+                var.bar_n_2 = None
+                var.boll_n_2 = None
 
     def pre_close(self, var, symbol):
         flag = True
@@ -364,7 +372,13 @@ class Variables(object):
         self.open_price = 0
         self.direction = ''
         self.open_vol = 0
+
         self.pre_bar_direction_flag = ''
+        self.signal_count=0
+        self.bar_n_2 = None
+        self.bar_n_1 = None
+        self.boll_n_2 = None
+        self.boll_n_1 = None
 
         self.gain_over_flag = False
         self.max_gain = 0
