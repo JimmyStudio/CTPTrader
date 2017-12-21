@@ -1,11 +1,14 @@
 # CTPTrader
+> event-driven engine
+
 > create strategies with python
 
 > trading through CTP apis (transfer to python with ctypes)
 
-> store in MongoDB
+> all transaction store in MongoDB
 
-> automatic running strategies both in windows and linux
+> automatic suspend and restart strategies in different trading periods
 
 > back testing module is coming soon
 
+> web service module is coming soon
