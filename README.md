@@ -11,6 +11,8 @@
 
 > collect ticks of all futures in CZCE、DCE and SHFE
 
+> run both in Windows and Lunix
+
 > back testing module is coming soon
 
 > web service module is coming soon
