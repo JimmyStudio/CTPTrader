@@ -140,7 +140,7 @@ class BollStrategy_x(TradeStrategy):
         if var.direction == SHORT:
             symbol_obj = self.context.symbol_infos[bar.symbol]
             if var.close_count >= 3:
-                if not self.pre_close(var, bar.symbol):
+                if self.pre_close(var, bar.symbol):
                     log.info('%s 平空 *' % bar.symbol)
                     self.order(bar.symbol,SHORT,CLOSE,var.open_vol,limit_price=bar.close + symbol_obj.tick_size)
             else:
@@ -148,7 +148,7 @@ class BollStrategy_x(TradeStrategy):
                     var.close_count += 1
                     log.info('%s 平空计数器+1 close_count %s' % (bar.symbol, var.close_count))
                     if var.close_count >= 3:
-                        if not self.pre_close(var, bar.symbol):
+                        if self.pre_close(var, bar.symbol):
                             log.info('%s 平空' % bar.symbol)
                             self.order(bar.symbol, SHORT, CLOSE, var.open_vol,limit_price=bar.close + var.slippage * symbol_obj.tick_size)
 
@@ -156,7 +156,7 @@ class BollStrategy_x(TradeStrategy):
         if var.direction == LONG:
             symbol_obj = self.context.symbol_infos[bar.symbol]
             if var.close_count >= 3:
-                if not self.pre_close(var, bar.symbol):
+                if self.pre_close(var, bar.symbol):
                     log.info('%s 平多 *' % bar.symbol)
                     self.order(bar.symbol,LONG,CLOSE,var.open_vol,limit_price=bar.close - symbol_obj.tick_size)
             else:
@@ -164,7 +164,7 @@ class BollStrategy_x(TradeStrategy):
                     var.close_count += 1
                     log.info('%s 平多计数器+1 close_count %s' % (bar.symbol, var.close_count))
                     if var.close_count >= 3:
-                        if not self.pre_close(var, bar.symbol):
+                        if self.pre_close(var, bar.symbol):
                             log.info('%s 平多' % bar.symbol)
                             self.order(bar.symbol, LONG, CLOSE, var.open_vol,limit_price=bar.close -var.slippage * symbol_obj.tick_size)
 
