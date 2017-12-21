@@ -79,6 +79,7 @@ class BollStrategy_x(TradeStrategy):
         print('boll n2 %s' % var.boll_n_2)
         print('boll n1 %s' % var.boll_n_1)
         print('signal_count %s '% var.signal_count)
+        print('close_count %s' % var.close_count)
 
         if ma is not None and boll is not None:
             self.pre_bar_direction_flag(var, bar, boll)
@@ -145,6 +146,7 @@ class BollStrategy_x(TradeStrategy):
             else:
                 if bar.close > boll.mid and bar.close > bar.open and (boll.top - boll.bot) / boll.mid > var.spread_thres:
                     var.close_count += 1
+                    log.info('%s 平空计数器+1 close_count %s' % (bar.symbol, var.close_count))
                     if var.close_count >= 3:
                         if not self.pre_close(var, bar.symbol):
                             log.info('%s 平空' % bar.symbol)
@@ -160,6 +162,7 @@ class BollStrategy_x(TradeStrategy):
             else:
                 if bar.close < boll.mid and bar.close < bar.open and (boll.top - boll.bot) / boll.mid > var.spread_thres:
                     var.close_count += 1
+                    log.info('%s 平多计数器+1 close_count %s' % (bar.symbol, var.close_count))
                     if var.close_count >= 3:
                         if not self.pre_close(var, bar.symbol):
                             log.info('%s 平多' % bar.symbol)
@@ -211,7 +214,7 @@ class BollStrategy_x(TradeStrategy):
                         if cond_3:
                             if self.pre_open(var, bar.symbol):
                                 log.info('%s 连续3根满足条件开空' % bar.symbol)
-                                symbol_obj = var.symbol_infos[bar.symbol]
+                                symbol_obj = self.context.symbol_infos[bar.symbol]
                                 self.order(bar.symbol, SHORT, OPEN, var.limit_vol,limit_price=bar.close - var.slippage * symbol_obj.tick_size)
                 # 放弃所有信号
                 var.pre_bar_direction_flag = ''
