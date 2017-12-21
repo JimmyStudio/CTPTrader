@@ -3,7 +3,7 @@
 
 > trading through CTP apis (transfer to python with ctypes)
 
-> store in mongodb
+> store in MongoDB
 
 > automatic running strategies both in windows and linux
 
