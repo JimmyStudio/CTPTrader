@@ -383,21 +383,21 @@ class Variables(object):
 
         self.slippage = 2 # 开仓价上下浮动1个变动单位
 
-        self.spread_thres = 0.00006  # 上下轨价差阈值
-        self.open_thres = 0.01  # 开仓close-open阈值
-        self.tick_open_thres = 0.00005  # 第2bar 按tick开仓阈值
-        self.ma_thres = -0.00006  # 与ma差值阈值
-        self.stop_loss_thres = 0.001  # 止损阈值
-        self.gain_thres = 0.001  # 止盈开始阈值
-        self.stop_gain_thres = 0.618  # 止盈回吐阈值
-
-        # self.spread_thres = 0.006  # 上下轨价差阈值
+        # self.spread_thres = 0.00006  # 上下轨价差阈值
         # self.open_thres = 0.01  # 开仓close-open阈值
-        # self.tick_open_thres = 0.005  # 第2bar 按tick开仓阈值
-        # self.ma_thres = -0.006  # 与ma差值阈值
-        # self.stop_loss_thres = 0.01  # 止损阈值
-        # self.gain_thres = 0.01  # 止盈开始阈值
+        # self.tick_open_thres = 0.00005  # 第2bar 按tick开仓阈值
+        # self.ma_thres = -0.00006  # 与ma差值阈值
+        # self.stop_loss_thres = 0.001  # 止损阈值
+        # self.gain_thres = 0.001  # 止盈开始阈值
         # self.stop_gain_thres = 0.618  # 止盈回吐阈值
+
+        self.spread_thres = 0.006  # 上下轨价差阈值
+        self.open_thres = 0.01  # 开仓close-open阈值
+        self.tick_open_thres = 0.005  # 第2bar 按tick开仓阈值
+        self.ma_thres = -0.006  # 与ma差值阈值
+        self.stop_loss_thres = 0.01  # 止损阈值
+        self.gain_thres = 0.01  # 止盈开始阈值
+        self.stop_gain_thres = 0.618  # 止盈回吐阈值
 
 
 
