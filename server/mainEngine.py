@@ -212,11 +212,12 @@ class MainEngine(EventEngine):
             strategy_class = strategy['class']
             # 子线程启动一个策略engine  通过类名重新实例化
             strategy = eval(strategy_class)()
-            # 初始化context的trading_day
-            strategy.context.trading_day = trading_day
 
             strategy_thread = Thread(target=strategy.run)
             strategy_thread.start()
+
+            # 重置context的trading_day
+            strategy.context.trading_day = trading_day
 
             force_close_flags = {}
             for symbol in strategy.context.force_close_minutes:
@@ -279,8 +280,8 @@ class MainEngine(EventEngine):
             # 日内平仓的策略删除 context
             # if not strategy['end_trading_flag']:
             ctx = strategy['strategy'].context
-            # 更新context.trading_day
-            ctx.trading_day = trading_day
+            # 更新context.trading_day 废弃？
+            # ctx.trading_day = trading_day
             # 一个交易日结束 清空挂单，将确认结算单flag置为false
             if clear_unfilled_order_flag:
                 ctx.orders = {}
