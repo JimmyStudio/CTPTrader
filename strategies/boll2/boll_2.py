@@ -130,7 +130,7 @@ class BollStrategy_x(TradeStrategy):
                                limit_price=tick.last_price + var.slippage * symbol_obj.tick_size)
 
     def pre_bar_direction_flag(self, var, bar, boll):
-        if (boll.top - boll.bot)/boll.mid > var.spread_thres and var.signal_count == 0:
+        if (boll.top - boll.bot)/boll.mid > var.spread_thres and var.signal_count == 0 and var.open_vol == 0:
             if bar.close < boll.bot:
                 var.pre_bar_direction_flag = LONG
             elif bar.close > boll.top:
