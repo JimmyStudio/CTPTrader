@@ -10,11 +10,16 @@ description:
 '''
 
 import requests as rq
-
+from threading import Thread
 __author__ = 'Jimmy'
 
 
 def send(msg, mobile='13381597676‬'):
+    t = Thread(target=__send, args=(msg,mobile))
+    t.start()
+
+
+def __send(msg, mobile='13381597676‬'):
     url = 'http://222.73.117.158/msg/HttpBatchSendSM'
     r = rq.post(url=url, data={
         'needstatus': True,
