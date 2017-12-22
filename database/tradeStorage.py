@@ -162,6 +162,29 @@ def updateContext(event):
                 db.contexts.insert(ctx)
 
 
+# 通过某个context实例保存context到数据库
+def update_context_with_context(context):
+    db = bs.SharedDatabase.tradeDatabase
+    # 序列化 context
+    serialize_ctx = pkl.dumps(context)
+    ctx = {
+        'context': serialize_ctx,
+        'user_id': context.user_id,
+        'broker_id': context.broker_id,
+        'strategy_id': context.strategy_id,
+        'strategy_name': context.strategy_name,
+    }
+    ctx = bs.insertTime(ctx)
+    if db.contexts.find(
+            {'user_id': ctx['user_id'], 'broker_id': ctx['broker_id'], 'strategy_id': ctx['strategy_id'],
+             'strategy_name': ctx['strategy_name']}).count() > 0:
+        db.contexts.update(
+            {'user_id': ctx['user_id'], 'broker_id': ctx['broker_id'], 'strategy_id': ctx['strategy_id'],
+             'strategy_name': ctx['strategy_name']}, {"$set": ctx})
+    else:
+        db.contexts.insert(ctx)
+
+
 # 获取context
 def getConext(userid, brokerid, strategy_id, strategy_name):
     db = bs.SharedDatabase.tradeDatabase
