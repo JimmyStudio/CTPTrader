@@ -230,7 +230,7 @@ class BollStrategy_x(TradeStrategy):
                         # 3
                         b2, b1 = var.bar_n_2, var.bar_n_1
                         mn = (b2.close + b1.close + bar.close) / 3.00
-                        cond_3 = ma - mn > - var.ma_thres * boll.mid
+                        cond_3 = ma - mn > var.ma_thres * boll.mid
 
                         if cond_3:
                             if self.pre_open(var, bar.symbol):
@@ -291,7 +291,7 @@ class BollStrategy_x(TradeStrategy):
                          # 3
                         b2, b1 = var.bar_n_2, var.bar_n_1
                         mn = (b2.close + b1.close + bar.close) / 3.00
-                        cond_3 = mn - ma > -var.ma_thres * boll.mid
+                        cond_3 = mn - ma > var.ma_thres * boll.mid
 
                         if cond_3:
                             if self.pre_open(var, bar.symbol):
