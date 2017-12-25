@@ -14,7 +14,7 @@ from threading import Thread
 __author__ = 'Jimmy'
 
 
-def send(msg, mobile='13381597676‬'):
+def send(msg, mobile='13381597676'):
     t = Thread(target=__send, args=(msg,mobile))
     t.start()
 

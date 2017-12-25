@@ -43,7 +43,16 @@ class Liao(TradeStrategy):
     def long_signal(self, var, bar):
         pass
 
-
+    # 1 开仓方向判断
+    def pre_bar_direction_flag(self, var, bar):
+        if var.open_vol == 0 and var.pre_bar_direction_flag == '':
+            symbol_obj = self.context.symbol_infos[var.symbol]
+            if bar.close - bar.open > 10 * symbol_obj.tick_size:
+                var.pre_bar_direction_flag = LONG
+                var.close_prices.append(bar.close)
+            elif bar.open - bar.close > 10 * symbol_obj.tick_size:
+                var.pre_bar_direction_flag = SHORT
+                var.close_prices.append(bar.close)
 
 
     def pre_close(self, var, symbol):
@@ -74,8 +83,7 @@ class Variables(object):
     def __init__(self, symbol, limit_vol=1):
         self.symbol = symbol
         self.limit_vol = limit_vol
-        self.boll = Boll(cycle=35)
-        self.ma = MA()
+        self.close_prices=[]
 
         self.bar_n_2 = None
         self.bar_n_1 = None
