@@ -19,7 +19,7 @@ from utils import message as msg
 
 class Liao(TradeStrategy):
     def initialize(self):
-        self.context.universe = ['rb1805', 'i1805', 'SR805', 'FG805', 'y1805']
+        self.context.universe = ['rb1805']
         self.context.strategy_name = 'liao_trend'
         self.context.strategy_id = 'liao_trend_v1.0'
         self.context.bar_frequency = '30M'
@@ -37,22 +37,95 @@ class Liao(TradeStrategy):
         pass
 
     def handle_bar(self, bar):
-        pass
+        for sys_id, order in self.context.orders.items():
+            if order.symbol == bar.symbol:
+                self.cancel_order(order)
+        var = self.context.vars[bar.symbol]
+        symbol_obj = self.context.symbol_infos[var.symbol]
+        if var.pre_bar_direction_flag == LONG:
+            if var.num_from_big_bar ==0 :
+                if bar.close - bar.open > var.open_thres * symbol_obj.tick_size:
+                    print('%s 按barj+1.close开仓' % bar.symbol)
+                    if self.pre_open(var, bar.symbol):
+                        var.clear_signal()
+                    else:
+                        print('%s 按barj+1.close开仓 有持仓或挂单舍弃开仓信号' % bar.symbol)
+                else:
+                    var.exchange_peak(bar.close)
+                    var.num_from_big_bar += 1
+            elif var.num_from_big_bar < var.open_num_from_big_bar:
+                var.exchange_peak(bar.close)
+                var.num_from_big_bar += 1
+            elif var.num_from_big_bar < var.max_open_num_from_big_bar:
+                var.exchange_peak(bar.close)
+                var.num_from_big_bar += 1
+                if bar.close > var.big_bar_close and var.min_price > var.big_bar_open and var.max_price > var.big_bar_close:
+                    print('%s 大阳线开多' % bar.symbol)
+                    if self.pre_open(var, bar.symbol):
+                        var.clear_signal()
+                    else:
+                        print('%s 大阳线开多仓 有持仓或挂单舍弃开仓信号' % bar.symbol)
+
+                elif var.score < 0 and var.min_price < var.big_bar_open and var.max_price < var.big_bar_close and bar.close < var.big_bar_close:
+                    print('%s 大阳线开空' % bar.symbol)
+                    if self.pre_open(var, bar.symbol):
+                        var.clear_signal()
+                    else:
+                        print('%s 大阳线开多空 有持仓或挂单舍弃开仓信号' % bar.symbol)
+
+                if var.num_from_big_bar == 25:
+                    print('%s 大阳线第25个bar重置清空信号' % bar.symbol)
+                    var.clear_signal()
+        elif var.pre_bar_direction_flag == SHORT:
+            if var.num_from_big_bar ==0 :
+                if bar.open - bar.close > var.open_thres * symbol_obj.tick_size:
+                    print('%s 大阴线按barj+1.close开仓' % bar.symbol)
+                    if self.pre_open(var, bar.symbol):
+                        var.clear_signal()
+                    else:
+                        print('%s 大阴线按barj+1.close开仓 有持仓或挂单舍弃开仓信号' % bar.symbol)
+                else:
+                    var.exchange_peak(bar.close)
+                    var.num_from_big_bar += 1
+            elif var.num_from_big_bar < var.open_num_from_big_bar:
+                var.exchange_peak(bar.close)
+                var.num_from_big_bar += 1
+            elif var.num_from_big_bar < var.max_open_num_from_big_bar:
+                var.exchange_peak(bar.close)
+                var.num_from_big_bar += 1
+                if bar.close < var.big_bar_close and var.min_price < var.big_bar_close and var.max_price < var.big_bar_open:
+                    print('%s 大阴线开空' % bar.symbol)
+                    if self.pre_open(var, bar.symbol):
+                        var.clear_signal()
+                    else:
+                        print('%s 大阴线开空 有持仓或挂单舍弃开仓信号' % bar.symbol)
+                elif var.score > 0 and var.min_price > var.big_bar_close and var.max_price > var.big_bar_open and bar.close > var.big_bar_open:
+                    print('%s 大阴线开多' % bar.symbol)
+                    if self.pre_open(var, bar.symbol):
+                        var.clear_signal()
+                    else:
+                        print('%s 大阴线开多 有持仓或挂单舍弃开仓信号' % bar.symbol)
+
+                if var.num_from_big_bar == 25:
+                    print('%s 大阴线第25个bar重置清空信号' % bar.symbol)
+                    var.clear_signal()
+        print('%s check 是否要转变信号' % bar.symbol)
+        self.pre_bar_direction_flag(var,bar,symbol_obj)
 
 
-    def long_signal(self, var, bar):
-        pass
-
-    # 1 开仓方向判断
-    def pre_bar_direction_flag(self, var, bar):
-        if var.open_vol == 0 and var.pre_bar_direction_flag == '':
-            symbol_obj = self.context.symbol_infos[var.symbol]
-            if bar.close - bar.open > 10 * symbol_obj.tick_size:
-                var.pre_bar_direction_flag = LONG
-                var.close_prices.append(bar.close)
-            elif bar.open - bar.close > 10 * symbol_obj.tick_size:
-                var.pre_bar_direction_flag = SHORT
-                var.close_prices.append(bar.close)
+    # 开仓方向判断
+    def pre_bar_direction_flag(self, var, bar, symbol_obj):
+        # check 是否要转变信号
+        if bar.close - bar.open > var.open_thres * symbol_obj.tick_size:
+            var.clear_signal()
+            var.pre_bar_direction_flag = LONG
+            var.big_bar_close = bar.close
+            var.big_bar_open = bar.open
+        elif bar.open - bar.close > var.open_thres * symbol_obj.tick_size:
+            var.clear_signal()
+            var.pre_bar_direction_flag = SHORT
+            var.big_bar_close = bar.close
+            var.big_bar_open = bar.open
 
 
     def pre_close(self, var, symbol):
@@ -78,25 +151,21 @@ class Liao(TradeStrategy):
         return flag
 
 
-
 class Variables(object):
     def __init__(self, symbol, limit_vol=1):
         self.symbol = symbol
         self.limit_vol = limit_vol
-        self.close_prices=[]
-
-        self.bar_n_2 = None
-        self.bar_n_1 = None
-
-        self.boll_n_2 = None
-        self.boll_n_1 = None
-        self.boll_t = None # 最新的boll
-
+        self.num_from_big_bar=0
+        self.big_bar_close = 0
+        self.big_bar_open = 0
+        self.score = 0
+        self.max_price=-999999999
+        self.min_price=999999999
+        self.pre_bar_direction_flag = ''
 
         self.open_price = 0
         self.direction = ''
         self.open_vol = 0
-        self.pre_bar_direction_flag = ''
 
         self.gain_over_flag = False
         self.max_gain = 0
@@ -105,29 +174,22 @@ class Variables(object):
 
         self.slippage = 2 # 开仓价上下浮动1个变动单位
 
-        self.spread_thres = 0.006  # 上下轨价差阈值
-        self.open_thres = 0.01  # 开仓close-open阈值
-        self.tick_open_thres = 0.005  # 第2bar 按tick开仓阈值
-        self.ma_thres = -0.006  # 与ma差值阈值
-        self.stop_loss_thres = 0.01  # 止损阈值
-        self.gain_thres = 0.01  # 止盈开始阈值
-        self.stop_gain_thres = 0.618  # 止盈回吐阈值
+        self.open_thres = 10  # 开仓tick倍数
+        self.open_num_from_big_bar = 4 # 从大阳线后第5个开始判断是否开仓
+        self.max_open_num_from_big_bar = 24 # 最多判断连续25个
 
+    def exchange_peak(self, price):
+        if price > self.max_price:
+            self.max_price = price
+        if price < self.min_price:
+            self.min_price = price
 
-
-    def initialize(self):
-        self.open_price = 0
-        self.direction = ''
-        self.open_vol = 0
-
+    def clear_signal(self):
+        self.min_price = 999999999
+        self.max_price = -999999999
+        self.num_from_big_bar = 0
+        self.big_bar_close = 0
+        self.big_bar_open = 0
         self.pre_bar_direction_flag = ''
-        self.signal_count=0
-        self.bar_n_2 = None
-        self.bar_n_1 = None
-        self.boll_n_2 = None
-        self.boll_n_1 = None
 
-        self.gain_over_flag = False
-        self.max_gain = 0
-        self.close_count = 0
 
