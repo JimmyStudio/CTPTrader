@@ -11,7 +11,7 @@ description:
 
 __author__ = 'Jimmy'
 
-from strategies.boll2.boll_2 import *
+from strategies.liao.liao import *
 from utils import tools as tl
 from database import tradeStorage as ts
 import pickle as pkl
@@ -306,7 +306,8 @@ if __name__ == '__main__':
     me = MainEngine()
     me.start_up()
     print('时间: %s ===MainEngine启动===' % datetime.now())
-    me.add_strategy('BollStrategy_2')
+    # me.add_strategy('BollStrategy_2')
+    me.add_strategy('Liao')
 
 
 
