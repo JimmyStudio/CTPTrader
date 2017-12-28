@@ -69,6 +69,7 @@ class Liao(TradeStrategy):
 
 
     def handle_bar(self, bar):
+        print(bar)
         # 撤单
         for sys_id, order in self.context.orders.items():
             if order.symbol == bar.symbol:
