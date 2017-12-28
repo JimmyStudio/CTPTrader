@@ -18,17 +18,17 @@ from utils import message as msg
 
 class BollStrategy_x(TradeStrategy):
     def initialize(self):
-        self.context.universe = ['rb1805','i1805','SR805','FG805','y1805']
+        self.context.universe = ['rb1805','i1805','SR805','FG805','y1805','m1805','SF805','TA805','jm1805','ZC805']
         self.context.strategy_name = 'sp_boll_15M_v4.0'
         self.context.strategy_id = 'sp_boll_15M'
         self.context.bar_frequency = '15M'
         self.context.init_cash = 100000
 
-        self.user_id = '00305188'
-        self.password = 'Jinmi123'
-        self.broker_id = '6000'
-        self.trade_front = 'tcp://101.231.162.58:41205'
-        self.market_front = 'tcp://101.231.162.58:41213'
+        self.context.user_id = '00305188'
+        self.context.password = 'Jinmi123'
+        self.context.broker_id = '6000'
+        self.context.trade_front = 'tcp://101.231.162.58:41205'
+        self.context.market_front = 'tcp://101.231.162.58:41213'
 
         # self.context.user_id = '104749'
         # self.context.password = 'jinmi1'
