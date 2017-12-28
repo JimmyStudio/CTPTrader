@@ -291,7 +291,7 @@ class Variables(object):
 
         self.slippage = 2 # 开仓价上下浮动1个变动单位
 
-        self.open_thres = 1  # 开仓tick倍数
+        self.open_thres = 10  # 开仓tick倍数
         self.open_num_from_big_bar = 4 # 从大阳线后第5个开始判断是否开仓
         self.max_open_num_from_big_bar = 24 # 最多判断连续25个
         self.stop_gain_thres = 0.5
