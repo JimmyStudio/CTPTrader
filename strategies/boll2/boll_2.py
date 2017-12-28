@@ -416,3 +416,41 @@ class Variables(object):
         self.gain_over_flag = False
         self.max_gain = 0
         self.close_count = 0
+
+if __name__ == '__main__':
+    pass
+    # s = BollStrategy_x()
+    # db = pymongo.MongoClient(host='192.168.1.10', port=27017).futures
+    # symbols = s.context.universe
+    # for symbol in symbols:
+    #     res = db.history_bar.find({'InstrumentID': symbol, 'type': '15m', 'TradingDay': {'$gte': 20171219}}).sort(
+    #         [('TradingDay', -1), ('levelNo', -1)]).limit(74)
+    #     res = list(res)
+    #     res.reverse()
+    #     print('计算',symbol)
+    #     print(len(res))
+    #     for bar in res:
+    #         bar =Bar(bar['InstrumentID'],op=bar['OpenPrice'],cl=bar['ClosePrice'],high=bar['HighPrice'],low=bar['LowPrice'])
+    #         s.handle_bar(bar)
+    #
+    # db = bs.SharedDatabase.tradeDatabase
+    # result = db.contexts.find(
+    #     {'user_id': '00305188', 'broker_id': '6000', 'strategy_id': 'sp_boll_15M',
+    #      'strategy_name': 'sp_boll_15M_v4.0'}).limit(1)
+    # res = result.next()['context']
+    # ctx = pkl.loads(res)
+    #
+    # # ctx.universe = ['rb1805','i1805','SR805','FG805','y1805','m1805','SF805','TA805','jm1805','ZC805']
+    #
+    # # 保存 vars变量
+    # for k,v in s.context.vars.items():
+    #     ctx.vars[k] = v
+    #
+    # # 添加Symbol属性和tick收集器
+    # for symbol in s.context.universe:
+    #     ctx.symbol_infos[symbol] = Symbol(symbol)
+    #     ctx.tick_convers[symbol] = ta.TickConver(symbol, ctx.bar_frequency)
+    #
+    # ctx.portfolio.symbol_infos = ctx.symbol_infos
+    #
+    # ts.update_context_with_context(ctx)
