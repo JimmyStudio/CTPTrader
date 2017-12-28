@@ -135,7 +135,7 @@ def check_log(insert_date):
 
 
 if __name__ == '__main__':
-    check_collector('2017-12-21')
+    clear_log('008105','liao_trend_v1.0')
 
 
 

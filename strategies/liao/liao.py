@@ -70,6 +70,9 @@ class Liao(TradeStrategy):
         var = self.context.vars[bar.symbol]
         symbol_obj = self.context.symbol_infos[var.symbol]
 
+        if self.pre_close(var, bar.symbol):
+            self.close_signal(var, bar, symbol_obj)
+
         # 判断最大利润
         if var.open_vol > 0:
             delta = var.open_price - bar.close
@@ -228,6 +231,9 @@ class Liao(TradeStrategy):
 
     # 开仓方向判断
     def pre_bar_direction_flag(self, var, bar, symbol_obj):
+        # if var.num_from_big_bar == 24:
+        #     var.clear_signal()
+        #
         # check 是否要转变信号
         if bar.close - bar.open > var.open_thres * symbol_obj.tick_size:
             var.clear_signal()
@@ -293,7 +299,7 @@ class Variables(object):
 
         self.open_thres = 10  # 开仓tick倍数
         self.open_num_from_big_bar = 4 # 从大阳线后第5个开始判断是否开仓
-        self.max_open_num_from_big_bar = 24 # 最多判断连续25个
+        self.max_open_num_from_big_bar = 25 # 最多判断连续25个
         self.stop_gain_thres = 0.5
         self.gain_thres = 1.015
         self.two_big_bar_stop_thres = 5
