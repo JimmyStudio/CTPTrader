@@ -76,7 +76,7 @@ class Liao(TradeStrategy):
                 self.cancel_order(order)
         var = self.context.vars[bar.symbol]
         symbol_obj = self.context.symbol_infos[var.symbol]
-
+        # 判断是否需要平仓
         if self.pre_close(var, bar.symbol):
             self.close_signal(var, bar, symbol_obj)
 
@@ -327,7 +327,7 @@ class Variables(object):
         self.open_thres = 10  # 开仓tick倍数
         self.open_num_from_big_bar = 4 # 从大阳线后第5个开始判断是否开仓
         self.max_open_num_from_big_bar = 24 # 最多判断连续25个
-        self.stop_gain_thres = 0.5      # 止盈后回撤系数
+        self.stop_gain_thres = 0.6      # 止盈后回撤系数
         self.gain_thres = 1.01         # 止盈开始系数
         self.two_big_bar_stop_thres = 5 # 两根大阳线后续按tick 跌破5*tick_size止损
         self.stop_loss_thres = 0.02    # 按账户收益止损系数
