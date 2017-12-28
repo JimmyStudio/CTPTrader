@@ -157,6 +157,7 @@ class Liao(TradeStrategy):
                     var.clear_signal()
         print('%s check 是否要转变信号' % bar.symbol)
         self.pre_bar_direction_flag(var,bar,symbol_obj)
+        print(var)
 
 
     # 平仓
@@ -322,6 +323,9 @@ class Variables(object):
         self.max_gain = 0
         self.open_by_two_big_bar_flag = False
         self.open_account_value = 0
+
+    def __str__(self):
+        return ('%s %s %s' % (self.pre_bar_direction_flag, self.num_from_big_bar , self.score))
 
 
 
