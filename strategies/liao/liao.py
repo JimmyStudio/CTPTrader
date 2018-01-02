@@ -48,11 +48,11 @@ class Liao(TradeStrategy):
                     var.reverse_count += 1
                     if trade.direction == SHORT and var.reverse_count <= var.max_reverse_count:
                         print('%s 空单止损后反相开多' % trade.symbol)
-                        self.order(trade.symbol, LONG, OPEN, var.open_vol,
+                        self.order(trade.symbol, LONG, OPEN, var.limit_vol,
                                    limit_price=var.last_price + var.slippage * symbol_obj.tick_size)
                     elif var.direction == LONG and var.reverse_count <= var.max_reverse_count:
                         print('%s 多单止损后反相开空' % trade.symbol)
-                        self.order(trade.symbol, SHORT, OPEN, var.open_vol,
+                        self.order(trade.symbol, SHORT, OPEN, var.limit_vol,
                                    limit_price=var.last_price - var.slippage * symbol_obj.tick_size)
                 else:
                     # 平仓、止盈时 清空反手计数器
