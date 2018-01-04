@@ -73,9 +73,9 @@ class Symbol(object):
 
 
 if __name__ == '__main__':
-    sym = Symbol('m1801')
+    sym = Symbol('IH1801')
     print(sym)
-    print(sym.calculate_commission(CLOSE,3,6010))
+    # print(sym.calculate_commission(CLOSE,3,6010))
     # print(sym.calculate_commission(CLOSE_TODAY,5,6015))
     # al = Symbol('al1801')
     # print(al.calculate_commission(OPEN,2,15415))

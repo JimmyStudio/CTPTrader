@@ -17,6 +17,7 @@ from datetime import datetime as dt
 import datetime as dtm
 from database import base as bs
 from utils import tools as tl
+import pymongo
 
 class KDJ(object):
     def __init__(self, cyclenum= 13,a =1/3, b=1/3):
@@ -206,140 +207,105 @@ class Boll(object):
             del self._close_prices[0]
             return bollout
 
-
-
-# tick 转 bar  支持 任意Tick xT or任意秒 xS  or 任意分钟 xM
-# x 需要能整除60, 否则有BUG
-# x分钟的bar 如果第一个x分钟内只有一个tick则交易量为当前tick的量
-# 目前不考虑股指国债...
-# 任意 x hour 有BUG -- 20171103
+# tick 转 bar  支持 任意秒 xS  or 任意分钟 xM 任意小时x H
 class TickConver(object):
-    def __init__(self, symbol, data_frequency = '30T'):
+    def __init__(self, symbol, data_frequency = '30S'):
         self.symbol = symbol
-        self._tick_prices = []
-        self._begin_time = ''
-        self._trading_day = ''
-        self._vol_begin = 0
-        self._vol_update = 0
-        self.__option = self._compute_bar_option(data_frequency)
-        self._bar_period = self.__option['period']
-        self._bar_type = self.__option['type']
-        self._night_close_time = self._get_night_close_time(symbol)
-        self._bar_step = self._set_bar_step()
-        self._ticks = []
-
-
+        self.__option = self._compute_bar_option(data_frequency) # 3S, 4M , 1H
+        self.bar_period = self.__option['period'] # x
+        self.bar_type = self.__option['type']  # S M H
+        self.periods = self._periods_by_night_close_time(symbol)
+        self.bar_step = self._set_bar_step()
+        self.tables = self._generate_tables()
+        self.current_table = self.tables[0]
+        self.tick_prices = []
+        self.begin_time = ''
+        self.vol_begin = 0
 
     def tick_to_bar(self, tick):
-        # tick updatatime 合法
-        if self._check_tick(tick) :
-            # tick数量类型bar
-            if self._bar_type == 'T':
-                if self._bar_period == 1:
-                    return tick
-                else:
-                    bar_length = len(self._tick_prices)
-                    if bar_length == 0:
-                        self._vol_begin = int(tick['Volume'])
+        tick_timestamp = self._time_to_int(tick['UpdateTime'])
+        if self._check_tick(tick_timestamp,tick):
+            if self.begin_time == '':
+                self.begin_time = tick['UpdateTime']
 
-                    if bar_length < self._bar_period:
-                        self._tick_prices.append(tick['LastPrice'])
-                        self._ticks.append(tick)
-                        self._begin_time = tick['UpdateTime']
-                        return None
-                    elif bar_length == self._bar_period:
-                        # 由于tick是快照,下一个bar的第一个tick计算到上一个bar中,保证bar连续
-                        self._tick_prices.append(tick['LastPrice'])
-                        self._ticks.append(tick)
-                        vol = int(tick['Volume']) - self._vol_begin
-                        arr = np.array(self._tick_prices)
-                        bar = Bar(self.symbol, self._tick_prices[0], self._tick_prices[-1], arr.max(), arr.min(),
-                                  trading_day=tick['TradingDay'], begin_time=self._begin_time,
-                                  end_time=tick['UpdateTime'], vol=vol, tick_counter=bar_length + 1,ticks=self._ticks)
-                        self._tick_prices = []
-                        self._ticks = []
-                        self._tick_prices.append(tick['LastPrice'])
-                        self._ticks.append(tick)
-
-                        return bar
-            # 时间间隔类 bar
-            elif self._bar_type == 'M' or self._bar_type == 'S' or self._bar_type == 'H':
-                bar_length = len(self._tick_prices)
-                if bar_length == 0:
-                    self._init_first_tick_of_bar(tick)
+            if self.current_table.begin_sec < self.current_table.end_sec:
+                if self.current_table.begin_sec <= tick_timestamp < self.current_table.end_sec:
+                    self.tick_prices.append(tick['LastPrice'])
                     return None
                 else:
-                    time_space = self._compute_time_space()
-                    if self._compute_time_delta(self._trading_day, tick['UpdateTime'],
-                                                self._begin_time) >= self._bar_period * self._bar_step + time_space:
-                        # 由于tick是快照,下一个bar的第一个tick计算到上一个bar中,保证bar连续
-                        self._tick_prices.append(tick['LastPrice'])
-                        self._ticks.append(tick)
-                        self._vol_update = int(tick['Volume'])
+                    bar = None
+                    if len(self.tick_prices) > 0:
+                        self.tick_prices.append(tick['LastPrice'])
+                        vol = int(tick['Volume']) - self.vol_begin
+                        bar = Bar(self.symbol, self.tick_prices[0], self.tick_prices[-1], max(self.tick_prices),
+                                  min(self.tick_prices),
+                                  trading_day=tick['TradingDay'], begin_time=self.begin_time,
+                                  end_time=tick['UpdateTime'], vol=vol, tick_counter=len(self.tick_prices))
+                        self.tick_prices = []
+                        self.begin_time = ''
+                        self.vol_begin = 0
+                    for table in self.tables:
+                        if table.begin_sec < table.end_sec:
+                            if table.begin_sec <= tick_timestamp < table.end_sec:
+                                self.current_table = table
+                                self.begin_time = tick['UpdateTime']
+                                self.vol_begin = int(tick['Volume'])
+                                self.tick_prices.append(tick['LastPrice'])
+                        else:
+                            if table.begin_sec <= tick_timestamp < 86400:
+                                self.current_table = table
+                                self.begin_time = tick['UpdateTime']
+                                self.vol_begin = int(tick['Volume'])
+                                self.tick_prices.append(tick['LastPrice'])
 
-                        vol = abs(self._vol_update - self._vol_begin)
-                        arr = np.array(self._tick_prices)
-                        bar = Bar(self.symbol, self._tick_prices[0], self._tick_prices[-1], arr.max(), arr.min(),
-                                  trading_day=tick['TradingDay'], begin_time=self._begin_time,
-                                  end_time=tick['UpdateTime'], vol=vol, tick_counter=len(self._tick_prices),ticks=self._ticks)
-                        self._tick_prices = []
-                        self._ticks = []
-                        self._init_first_tick_of_bar(tick)
+                            elif 0 <= tick_timestamp < table.end_sec:
+                                self.current_table = table
+                                self.begin_time = tick['UpdateTime']
+                                self.vol_begin = int(tick['Volume'])
+                                self.tick_prices.append(tick['LastPrice'])
+                    if bar:
                         return bar
-                    else:
-                        self._tick_prices.append(tick['LastPrice'])
-                        self._ticks.append(tick)
-                        self._vol_update = int(tick['Volume'])
-                        return None
             else:
-                print('Unexcept bar type')
-                return None
-        else:
-            return None
+                if self.current_table.begin_sec <= tick_timestamp < 86400:
+                    self.tick_prices.append(tick['LastPrice'])
+                    return None
+                elif 0 <= tick_timestamp < self.current_table.end_sec:
+                    self.tick_prices.append(tick['LastPrice'])
+                    return None
+                else:
+                    bar = None
+                    if len(self.tick_prices) > 0:
+                        self.tick_prices.append(tick['LastPrice'])
+                        vol = int(tick['Volume']) - self.vol_begin
+                        bar = Bar(self.symbol, self.tick_prices[0], self.tick_prices[-1], max(self.tick_prices),
+                                  min(self.tick_prices),
+                                  trading_day=tick['TradingDay'], begin_time=self.begin_time,
+                                  end_time=tick['UpdateTime'], vol=vol, tick_counter=len(self.tick_prices))
+                        self.tick_prices = []
+                        self.begin_time = ''
+                        self.vol_begin = 0
+                    for table in self.tables:
+                        if table.begin_sec < table.end_sec:
+                            if table.begin_sec <= tick_timestamp < table.end_sec:
+                                self.current_table = table
+                                self.begin_time = tick['UpdateTime']
+                                self.vol_begin = int(tick['Volume'])
+                                self.tick_prices.append(tick['LastPrice'])
+                        else:
+                            if table.begin_sec <= tick_timestamp < 86400:
+                                self.current_table = table
+                                self.begin_time = tick['UpdateTime']
+                                self.vol_begin = int(tick['Volume'])
+                                self.tick_prices.append(tick['LastPrice'])
 
+                            elif 0 <= tick_timestamp < table.end_sec:
+                                self.current_table = table
+                                self.begin_time = tick['UpdateTime']
+                                self.vol_begin = int(tick['Volume'])
+                                self.tick_prices.append(tick['LastPrice'])
+                    if bar:
+                        return bar
 
-    def _init_first_tick_of_bar(self, tick):
-        self._tick_prices.append(tick['LastPrice'])
-        self._ticks.append(tick)
-        self._trading_day = tick['TradingDay']
-        self._begin_time = tick['UpdateTime']
-        self._vol_begin = int(tick['Volume'])
-
-    # 计算时间差  跨00:00:00的时间差计算需加1天后计算
-    def _compute_time_delta(self, trading_day, update_time, compare_time):
-        ut_year = ct_year = int(trading_day[0:4])
-        ut_month = ct_month = int(trading_day[4:6])
-        ut_day = ct_day = int(trading_day[6:8])
-
-        uts = update_time.split(':')
-        cts = compare_time.split(':')
-
-        ut = dt(ut_year, ut_month, ut_day, int(uts[0]), int(uts[1]), int(uts[2]))
-
-        # begin_time 秒位置为0参与计算 防止出现9:23:06 - 9:20:06 但实际应为 9:23:06-9:20:00
-        ct = 0
-        if self._bar_type == 'M':
-            extra_min = int(cts[1]) % self._bar_period
-            reset_min = int(cts[1]) - extra_min
-            ct = dt(ct_year, ct_month, ct_day, int(cts[0]), reset_min, 0)
-        # tick以秒为单位则按秒间隔重置tick开始时间
-        elif self._bar_type == 'S':
-            extra_sec = int(cts[2]) % self._bar_period
-            reset_sec = int(cts[2]) - extra_sec
-            ct = dt(ct_year, ct_month, ct_day, int(cts[0]), int(cts[1]), reset_sec)
-
-        elif self._bar_type == 'H':
-            # extra_hour = int(cts[0]) % self._bar_period
-            # reset_hour = int(cts[0]) - extra_hour
-            ct = dt(ct_year, ct_month, ct_day, int(cts[0]), 0, 0)
-
-        if int(uts[0]) < 3:
-            ut = ut + dtm.timedelta(days=1)
-        if int(cts[0]) < 3:
-            ct = ct + dtm.timedelta(days=1)
-        return (ut - ct).seconds
-
-    # 计算bar类型  1.按Tick数量组成bar  2.按时间周期组成bar
     def _compute_bar_option(self, data_frequency):
         if data_frequency == '' or data_frequency == '1T':
             raise ValueError('data_frequency can not be \'%s\' !!!' % data_frequency)
@@ -348,39 +314,58 @@ class TickConver(object):
         return {'period': period, 'type': type}
 
     def _set_bar_step(self):
-        if self._bar_type == 'M':
-            return 60
-        elif self._bar_type == 'H':
-            return 3600
+        if self.bar_type == 'M':
+            return self.bar_period * 60
+        elif self.bar_type == 'H':
+            return self.bar_period * 3600
         else:
-            return 1
+            return self.bar_period
 
-    # 计算交易节点间隔 按秒计算
-    def _compute_time_space(self):
-        # print(self._night_close_time)
-        if self._bar_period == 1 or self._night_close_time == None:
-            return 0
-        else:
-            temp = self._begin_time.split(':')
-            beg_timestamp = int(temp[0]) * 3600 + int(temp[1]) * self._bar_step + int(temp[2])
-            end_timestamp = beg_timestamp + self._bar_period * self._bar_step
-
-            if beg_timestamp <= self._night_close_time < end_timestamp:
-                if self._night_close_time < 10800:
-                    return 32400 - self._night_close_time
-                else:
-                    return 86400 -self._night_close_time + 32400
-
-            elif beg_timestamp <= 36900 < end_timestamp:
-                return 900
-            elif beg_timestamp <= 41400 < end_timestamp:
-                return 7200
+    # 获取开盘收盘时间
+    def _periods_by_night_close_time(self, symbol):
+        db = bs.SharedDatabase.futuresDatabase
+        symbol_code = tl.symbol_to_code(symbol)
+        result = db.future_info.find({'instrument_code':symbol_code})
+        try:
+            res = result.next()
+            nct= res['night_close_hour'] * 3600 + res['night_close_minute'] * 60
+            self._night_close_time = nct
+            if res['night_close_hour'] < 3:
+                return [Region(75600,86400),Region(0, nct),Region(32400, 36900),Region(37800, 41400),Region(48600, 54000)]
             else:
-                return 0
+                return [Region(75600,nct),Region(32400, 36900),Region(37800, 41400),Region(48600, 54000)]
+        except StopIteration:
+            return None
 
-    # 检查tick是否有效  => 是否在时间范围内 比如8：59：59, 15:00:01 ,23:30:01...均为不合法tick 不计入bar
-    def _check_tick(self, tick):
-        tick_timestamp = self._time_to_int(tick['UpdateTime'])
+    def _generate_tables(self):
+        tables = []
+        left_sep = 0
+        for period in self.periods:
+            begin = period.begin_sec
+            if left_sep != 0:
+                temp_end = tables[-1]
+                begin = period.begin_sec + self.bar_step - left_sep
+                reg = Region(temp_end.end_sec, begin)
+                tables.append(reg)
+
+            end = period.end_sec
+            sep = begin
+
+            while sep + self.bar_step < end:
+                temp = sep + self.bar_step
+                reg = Region(sep, temp)
+                sep = temp
+                tables.append(reg)
+            temp_end = tables[-1]
+            left_sep = end - temp_end.end_sec
+
+        if left_sep != 0:
+            temp_end = tables[-1]
+            reg = Region(temp_end.end_sec, 54000)
+            tables.append(reg)
+        return tables
+
+    def _check_tick(self, tick_timestamp,tick):
         flag = True
 
         # 11:30:00 ~ 13:30:00  15:00:00 ~ 21:00:00
@@ -405,148 +390,72 @@ class TickConver(object):
                 flag = False
         return flag
 
-
-    # 获取夜盘收盘时间
-    def _get_night_close_time(self, symbol):
-        db = bs.SharedDatabase.futuresDatabase
-        symbol_code = tl.symbol_to_code(symbol)
-        result = db.future_info.find({'instrument_code':symbol_code})
-        try:
-            res = result.next()
-            night_close_time = res['night_close_time']
-            temp = night_close_time.split(':')
-            return int(temp[0]) * 3600 + int(temp[1]) * 60 + int(temp[2])
-        except StopIteration:
-            return None
-
-
     def _time_to_int(self, tm):
         temp = tm.split(':')
         return int(temp[0]) * 3600 + int(temp[1]) * 60 + int(temp[2])
 
 
+#     def tick_to_bar(self, tick):
+#         # tick updatatime 合法
+#         if self._check_tick(tick) :
+#             # tick数量类型bar
+#             if self._bar_type == 'T':
+#                 if self._bar_period == 1:
+#                     return tick
+#                 else:
+#                     bar_length = len(self._tick_prices)
+#                     if bar_length == 0:
+#                         self._vol_begin = int(tick['Volume'])
+#
+#                     if bar_length < self._bar_period:
+#                         self._tick_prices.append(tick['LastPrice'])
+#                         self._ticks.append(tick)
+#                         self._begin_time = tick['UpdateTime']
+#                         return None
+#                     elif bar_length == self._bar_period:
+#                         # 由于tick是快照,下一个bar的第一个tick计算到上一个bar中,保证bar连续
+#                         self._tick_prices.append(tick['LastPrice'])
+#                         self._ticks.append(tick)
+#                         vol = int(tick['Volume']) - self._vol_begin
+#                         arr = np.array(self._tick_prices)
+#                         bar = Bar(self.symbol, self._tick_prices[0], self._tick_prices[-1], arr.max(), arr.min(),
+#                                   trading_day=tick['TradingDay'], begin_time=self._begin_time,
+#                                   end_time=tick['UpdateTime'], vol=vol, tick_counter=bar_length + 1,ticks=self._ticks)
+#                         self._tick_prices = []
+#                         self._ticks = []
+#                         self._tick_prices.append(tick['LastPrice'])
+#                         self._ticks.append(tick)
+#
+#                         return bar
+
+
 if __name__ == '__main__':
-    ma = MA(cycle=2)
-    for i in range(10):
-        bar = Bar(symbol='rb1801',op=i+2,cl=i,high=i+5,low=i-5)
-        print(ma.compute(bar))
 
+    ct = TickConver('al1802', '1H')
+    print(ct.bar_step)
+    for tb in ct.tables:
+        print(tb)
 
-    # tick1 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '02:22:05',
-    #     'LastPrice': 22,
-    #     'Volume':33
-    # }
-    #
-    # tick2 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '02:23:07',
-    #     'LastPrice': 26,
-    #     'Volume': 333
-    #
-    # }
-    #
-    # tick3 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '02:24:00',
-    #     'LastPrice': 23,
-    #     'Volume': 432
-    # }
-    #
-    # tick4 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '02:24:12',
-    #     'LastPrice': 20,
-    #     'Volume': 455
-    # }
-    #
-    # tick5 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '02:27:00',
-    #     'LastPrice': 21,
-    #     'Volume': 467
-    # }
-    #
-    # tick6 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '02:28:15',
-    #     'LastPrice': 88,
-    #     'Volume': 487
-    # }
-    #
-    # tick7 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '09:00:01',
-    #     'LastPrice': 11,
-    #     'Volume': 490
-    # }
-    #
-    # tick8 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '09:04:01',
-    #     'LastPrice': 11,
-    #     'Volume': 490
-    # }
-    #
-    # tick9 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '09:05:00',
-    #     'LastPrice': 11,
-    #     'Volume': 490
-    # }
-    #
-    # tick10 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '10:14:02',
-    #     'LastPrice': 1,
-    #     'Volume': 490
-    # }
-    #
-    # tick11 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '10:15:06',
-    #     'LastPrice': 17,
-    #     'Volume': 540
-    # }
-    #
-    # tick12 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '10:30:02',
-    #     'LastPrice': 170,
-    #     'Volume': 540
-    # }
-    #
-    # tick13 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '10:31:02',
-    #     'LastPrice': 17,
-    #     'Volume': 560
-    # }
-    #
-    # tick14 = {
-    #     'TradingDay': '20170927',
-    #     'UpdateTime': '10:32:02',
-    #     'LastPrice': 17,
-    #     'Volume': 560
-    # }
-    #
-    #
-    # ct = TickConver('ag1801','3M')
-    # print(ct.tick_to_bar(tick1))
-    # print(ct.tick_to_bar(tick2))
-    # print(ct.tick_to_bar(tick3))
-    # print(ct.tick_to_bar(tick4))
-    # print(ct.tick_to_bar(tick5))
-    # print(ct.tick_to_bar(tick6))
-    # print(ct.tick_to_bar(tick7))
-    # print(ct.tick_to_bar(tick8))
-    # print(ct.tick_to_bar(tick9))
-    # print(ct.tick_to_bar(tick10))
-    # print(ct.tick_to_bar(tick11))
-    # print(ct.tick_to_bar(tick12))
-    # print(ct.tick_to_bar(tick13))
-    # print(ct.tick_to_bar(tick14))
+    db = pymongo.MongoClient(host='192.168.1.10', port=27017).futures
+    # res = db.al_price.find({'InstrumentID': 'al1802','TradingDay':20180104,'insert_date':'2018-01-03'},['InstrumentID', 'UpdateTime','TradingDay','LastPrice','Volume'])
+    # while True:
+    #     try:
+    #         bar = ct.tick_to_bar(next(res))
+    #         if bar:
+    #             print(bar)
+    #     except StopIteration:
+    #         break
+
+    res = db.al_price.find({'InstrumentID': 'al1802', 'TradingDay': 20180104, 'insert_date': '2018-01-04'},
+                           ['InstrumentID', 'UpdateTime', 'TradingDay', 'LastPrice', 'Volume'])
+    while True:
+        try:
+            bar = ct.tick_to_bar(next(res))
+            if bar:
+                print(bar)
+        except StopIteration:
+            break
+
 
 
 

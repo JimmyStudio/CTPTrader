@@ -56,7 +56,7 @@ def _get_trading_day(day):
 
 
 def copy_db(collection_name):
-    db1 = pymongo.MongoClient(host='116.226.243.99', port=27017).futures
+    db1 = pymongo.MongoClient(host='192.168.1.10', port=27017).futures
     db2 = SharedDatabase.futuresDatabase
     result = db1[collection_name].find()
     while True:
@@ -135,7 +135,7 @@ def check_log(insert_date):
 
 
 if __name__ == '__main__':
-    clear_log('008105','liao_trend_v1.0')
+    copy_db('future_info')
 
 
 

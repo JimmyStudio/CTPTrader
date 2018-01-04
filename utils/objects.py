@@ -19,7 +19,7 @@ class Context(object):
         self.universe = []
         self.strategy_id = ''
         self.strategy_name = ''
-        self.bar_frequency = '30T'
+        self.bar_frequency = '30S'
         self.init_cash = 0  # 初始资金
 
         # 日内策略需配置 交易日结束前几分钟清仓...***会删除该策略的context***
@@ -195,6 +195,27 @@ class KDJOut(object):
 
     def __str__(self):
         return 'KDJ: k1 %.2f, d1: %.2f, k2: %.2f, d2: %.2f, j1: %.2f' %(self.k1, self.d1, self.k2, self.d2, self.j2)
+
+
+class Region(object):
+    def __init__(self, begin_sec, end_sec):
+        self.begin_sec = begin_sec
+        self.end_sec = end_sec
+
+    def string_to_sec(self, str):
+        strs = str.split(':')
+        return int(strs[0]) * 3600 + int(strs[1]) * 60 + int(strs[2])
+
+    def sec_to_string(self, sec):
+        m_l = sec % 3600
+        hour = (sec - m_l)/3600
+        sec = m_l % 60
+        min = (m_l - sec) / 60
+        return '%s:%s:%s' % (str(int(hour)).zfill(2), str(int(min)).zfill(2), str(int(sec)).zfill(2))
+
+    def __str__(self):
+        return '%s ~ %s' %(self.sec_to_string(self.begin_sec),self.sec_to_string(self.end_sec))
+
 
 if __name__ == '__main__':
     # dict = {
