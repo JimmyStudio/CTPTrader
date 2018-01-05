@@ -433,7 +433,7 @@ class TickConver(object):
 
 if __name__ == '__main__':
 
-    ct = TickConver('v1802', '30M')
+    ct = TickConver('SF1802', '30M')
     print(ct.bar_step)
     for tb in ct.tables:
         print(tb)
