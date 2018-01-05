@@ -332,6 +332,8 @@ class TickConver(object):
             self._night_close_time = nct
             if res['night_close_hour'] < 3:
                 return [Region(75600,86400),Region(0, nct),Region(32400, 36900),Region(37800, 41400),Region(48600, 54000)]
+            elif res['night_close_hour'] > 24:
+                return [Region(32400, 36900),Region(37800, 41400),Region(48600, 54000)]
             else:
                 return [Region(75600,nct),Region(32400, 36900),Region(37800, 41400),Region(48600, 54000)]
         except StopIteration:
@@ -431,12 +433,12 @@ class TickConver(object):
 
 if __name__ == '__main__':
 
-    ct = TickConver('al1802', '1H')
+    ct = TickConver('v1802', '30M')
     print(ct.bar_step)
     for tb in ct.tables:
         print(tb)
 
-    db = pymongo.MongoClient(host='192.168.1.10', port=27017).futures
+    # db = pymongo.MongoClient(host='192.168.1.10', port=27017).futures
     # res = db.al_price.find({'InstrumentID': 'al1802','TradingDay':20180104,'insert_date':'2018-01-03'},['InstrumentID', 'UpdateTime','TradingDay','LastPrice','Volume'])
     # while True:
     #     try:
@@ -446,15 +448,15 @@ if __name__ == '__main__':
     #     except StopIteration:
     #         break
 
-    res = db.al_price.find({'InstrumentID': 'al1802', 'TradingDay': 20180104, 'insert_date': '2018-01-04'},
-                           ['InstrumentID', 'UpdateTime', 'TradingDay', 'LastPrice', 'Volume'])
-    while True:
-        try:
-            bar = ct.tick_to_bar(next(res))
-            if bar:
-                print(bar)
-        except StopIteration:
-            break
+    # res = db.al_price.find({'InstrumentID': 'al1802', 'TradingDay': 20180104, 'insert_date': '2018-01-04'},
+    #                        ['InstrumentID', 'UpdateTime', 'TradingDay', 'LastPrice', 'Volume'])
+    # while True:
+    #     try:
+    #         bar = ct.tick_to_bar(next(res))
+    #         if bar:
+    #             print(bar)
+    #     except StopIteration:
+    #         break
 
 
 

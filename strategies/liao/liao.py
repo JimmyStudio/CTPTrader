@@ -15,6 +15,7 @@ from utils.ta import *
 import utils.tools as tl
 import logging as log
 from utils import message as msg
+from datetime import datetime as dt
 
 
 class Liao(TradeStrategy):
@@ -143,7 +144,7 @@ class Liao(TradeStrategy):
 
 
     def handle_bar(self, bar):
-        print(bar)
+        print('时间:%s %s' %(dt.now(), bar))
         # 撤单
         for sys_id, order in self.context.orders.items():
             if order.symbol == bar.symbol:
