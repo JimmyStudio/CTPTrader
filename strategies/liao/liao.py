@@ -322,7 +322,7 @@ class Liao(TradeStrategy):
 
             # 止损 2
             upnl = (var.open_price - tick.last_price) * var.open_vol * symbol_obj.contract_size
-            if var.direction == SHORT:
+            if var.direction == LONG:
                 upnl = (tick.last_price - var.open_price) * var.open_vol * symbol_obj.contract_size
             if upnl < 0 and abs(upnl)/ var.open_margin > var.stop_loss_thres:
                 if var.direction == SHORT:
