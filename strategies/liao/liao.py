@@ -123,7 +123,7 @@ class Liao(TradeStrategy):
 
                         self.order(trade.symbol, LONG, OPEN, var.limit_vol,
                                    limit_price=var.last_price + var.slippage * symbol_obj.tick_size)
-                    elif var.direction == LONG and var.reverse_count <= var.max_reverse_count:
+                    elif trade.direction == LONG and var.reverse_count <= var.max_reverse_count:
                         msg.send('%s 多单止损后反相开空' % trade.symbol)
                         log.info('%s 多单止损后反相开空' % trade.symbol)
 
